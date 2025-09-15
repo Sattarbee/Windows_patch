@@ -2,12 +2,12 @@
 - name: Check for packages to include
   ansible.builtin.set_fact:
     accept_packages: "{{ acceptlist.split(',') }}"
-  when: acceptlist is defined and acceptlist | length > 0
+  when: acceptlist is defined and acceptlist != ''
 
 - name: Check for packages to exclude
   ansible.builtin.set_fact:
     reject_packages: "{{ rejectlist.split(',') }}"
-  when: rejectlist is defined and rejectlist | length > 0
+  when: rejectlist is defined and rejectlist != ''
 
 - name: Install Windows Updates
   ansible.windows.win_updates:
@@ -19,4 +19,4 @@
 
 - name: Display Patching Results
   ansible.builtin.debug:
-    msg: "{{ patchresult.updates | map(attribute='title') | list }}"
+    msg: "{{ patchresult.updates.values() | map(attribute='title') | list }}"
