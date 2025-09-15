@@ -4,6 +4,10 @@
   gather_facts: yes
 
   tasks:
+    - name: Debug OS variable
+      debug:
+        var: os
+
     - name: Patch Windows
       ansible.builtin.include_tasks: patch_windows.yml
       when: os is defined and (os is match("windows.*") or os is match("2022.*"))
