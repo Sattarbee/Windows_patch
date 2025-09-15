@@ -1,4 +1,9 @@
 ---
-- name: Patch Windows
-  ansible.builtin.include_tasks: patch_windows.yml
-  when: os is match("windows.*") or os is match("2022.*")
+- name: Patch Windows Systems
+  hosts: windows
+  gather_facts: yes
+
+  tasks:
+    - name: Patch Windows
+      ansible.builtin.include_tasks: patch_windows.yml
+      when: os is defined and (os | search("windows") or os | search("2022"))
