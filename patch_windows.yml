@@ -31,3 +31,18 @@
 - name: Show titles and categories of available updates
   debug:
     msg: "{{ updates_info }}"
+
+- name: Install all available Windows updates
+  ansible.windows.win_updates:
+    state: installed
+    reboot: yes
+  register: update_install_result
+
+- name: Reboot if required
+  ansible.windows.win_reboot:
+    reboot_timeout: 1200
+  when: update_install_result.reboot_required | default(false)
+
+- name: Show installed updates summary
+  debug:
+    var: update_install_result
