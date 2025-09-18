@@ -22,7 +22,6 @@
     #    msg: "{{ patchresult.updates.values() | map(attribute='title') | list }}"
 - name: Deploy Windows Patches
   hosts: windows
-  gather_facts: no
   tasks:
     - name: Check Windows Update Service Status
       win_service:
