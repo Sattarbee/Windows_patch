@@ -1,4 +1,3 @@
----
 - name: Check Windows Update Service Status
   ansible.windows.win_service:
     name: wuauserv
@@ -11,16 +10,16 @@
     state: started
   when: update_service_status.state != "running"
 
-- name: Search and Install Windows Updates
+- name: Search and Install All Available Windows Updates
   ansible.windows.win_updates:
-    category_names:
-      - SecurityUpdates
-      - CriticalUpdates
-      - ".NET Framework"
-      - "Definition Updates"
     reboot: yes
     state: installed
   register: update_result
+
+- name: Reboot if required
+  ansible.windows.win_reboot:
+    reboot_timeout: 1200
+  when: update_result.reboot_required | default(false)
 
 - name: Show installed updates summary
   debug:
@@ -33,5 +32,4 @@
 
 - name: Show installed patches
   debug:
-    var: installed_patches.stdout | from_json
-
+    var: installed_patches.stdout | default('[]') | from_json
