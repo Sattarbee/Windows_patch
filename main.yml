@@ -14,4 +14,4 @@
 
     - name: Patch Windows
       ansible.builtin.include_tasks: patch_windows.yml
-      when: os is defined and (os is match(".*Windows.*") or os is match(".*2022.*"))
+      when: os | lower is search("windows")

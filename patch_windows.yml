@@ -1,4 +1,4 @@
-# patch_windows.yml (✅ CORRECT format for include_tasks)
+---
 - name: Check Windows Update Service Status
   ansible.windows.win_service:
     name: wuauserv
@@ -22,4 +22,14 @@
 
 - name: Show installed updates summary
   debug:
-    msg: "{{ update_result }}"
+    var: update_result
+
+- name: List installed patches (hotfixes)
+  ansible.windows.win_shell: |
+    Get-HotFix | Select-Object -Property HotFixID, Description, InstalledOn | ConvertTo-Json -Depth 3
+  register: installed_patches
+
+- name: Show installed patches
+  debug:
+    var: installed_patches.stdout | from_json
+
