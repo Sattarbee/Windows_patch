@@ -1,36 +1,31 @@
----
-- name: Debug Windows Updates - List available updates and categories
-  hosts: windows
-  gather_facts: yes
-  tasks:
-    - name: Check Windows Update Service Status
-      ansible.windows.win_service:
-        name: wuauserv
-      register: update_service_status
+- name: Check Windows Update Service Status
+  ansible.windows.win_service:
+    name: wuauserv
+  register: update_service_status
 
-    - name: Start Windows Update Service if not running
-      ansible.windows.win_service:
-        name: wuauserv
-        start_mode: auto
-        state: started
-      when: update_service_status.state != "running"
+- name: Start Windows Update Service if not running
+  ansible.windows.win_service:
+    name: wuauserv
+    start_mode: auto
+    state: started
+  when: update_service_status.state != "running"
 
-    - name: Search for available Windows updates (no install)
-      ansible.windows.win_updates:
-        state: searched
-      register: available_updates
+- name: Search for available Windows updates (no install)
+  ansible.windows.win_updates:
+    state: searched
+  register: available_updates
 
-    - name: Show all available updates summary
-      debug:
-        var: available_updates.updates
+- name: Show all available updates summary
+  debug:
+    var: available_updates.updates
 
-    - name: Extract update titles and categories
-      set_fact:
-        updates_info: |
-          [{% for u in available_updates.updates %}
-            {"Title": "{{ u.title }}", "Categories": {{ u.categories | to_json }} }{% if not loop.last %},{% endif %}
-          {% endfor %}]
+- name: Extract update titles and categories
+  set_fact:
+    updates_info: |
+      [{% for u in available_updates.updates %}
+        {"Title": "{{ u.title }}", "Categories": {{ u.categories | to_json }} }{% if not loop.last %},{% endif %}
+      {% endfor %}]
 
-    - name: Show titles and categories of available updates
-      debug:
-        msg: "{{ updates_info }}"
+- name: Show titles and categories of available updates
+  debug:
+    msg: "{{ updates_info }}"
