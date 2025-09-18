@@ -1,22 +1,32 @@
 ---
 - name: Deploy Windows Patches
   hosts: windows
+  gather_facts: yes
+  become: false
+
   tasks:
+
     - name: Check Windows Update Service Status
-      win_service:
+      ansible.windows.win_service:
         name: wuauserv
       register: update_service_status
+
     - name: Start Windows Update Service if not running
-      win_service:
+      ansible.windows.win_service:
         name: wuauserv
         start_mode: auto
         state: started
       when: update_service_status.state != "running"
+
     - name: Search and Install Windows Updates
-      win_updates:
+      ansible.windows.win_updates:
         category_names:
           - SecurityUpdates
           - CriticalUpdates
         reboot: yes
         state: installed
       register: update_result
+
+    - name: Show installed updates summary
+      debug:
+        msg: "{{ update_result }}"
