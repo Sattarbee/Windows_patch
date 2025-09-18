@@ -17,6 +17,7 @@
       - SecurityUpdates
       - CriticalUpdates
       - ".NET Framework"
+      - "Definition Updates"
     reboot: yes
     state: installed
   register: update_result
