@@ -19,4 +19,11 @@
 
 - name: Display Patching Results
   ansible.builtin.debug:
-    msg: "{{ patchresult | json_query('updates[*].title') }}"
+    msg: >
+      {% if patchresult.updates is defined %}
+        {% for update in patchresult.updates %}
+          - {{ update.title }}
+        {% endfor %}
+      {% else %}
+        No updates found.
+      {% endif %}
