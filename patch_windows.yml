@@ -1,48 +1,15 @@
-# patch_windows.yml
 ---
-- name: Check Windows Update Service Status
-  ansible.windows.win_service:
-    name: wuauserv
-  register: update_service_status
+- name: Windows patching playbook
+  hosts: windows
 
-- name: Start Windows Update Service if not running
-  ansible.windows.win_service:
-    name: wuauserv
-    start_mode: auto
-    state: started
-  when: update_service_status.state != "running"
+  roles:
+    - shadowman_patching
 
-- name: Search for available Windows updates (no install)
-  ansible.windows.win_updates:
-    state: searched
-  register: available_updates
+  tasks:
 
-- name: Show all available updates summary
-  debug:
-    var: available_updates.updates
-
-- name: Extract update titles and categories
-  set_fact:
-    updates_info: |
-      [{% for u in available_updates.updates.values() %}
-        {"Title": "{{ u.title }}", "Categories": {{ u.categories | to_json }} }{% if not loop.last %},{% endif %}
-      {% endfor %}]
-
-- name: Show titles and categories of available updates
-  debug:
-    msg: "{{ updates_info }}"
-
-- name: Install all available Windows updates
-  ansible.windows.win_updates:
-    state: installed
-    reboot: yes
-  register: update_install_result
-
-- name: Reboot if required
-  ansible.windows.win_reboot:
-    reboot_timeout: 1200
-  when: update_install_result.reboot_required | default(false)
-
-- name: Show installed updates summary
-  debug:
-    var: update_install_result
+    - name: Build the report
+      ansible.builtin.include_role:
+        name: build_report_windows_patch
+        apply:
+          delegate_to: 172.25.225.75
+          run_once: true
