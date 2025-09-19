@@ -1,15 +1,22 @@
 ---
-- name: Windows patching playbook
-  hosts: windows
-  gather_facts: yes
+- name: Check for packages to include
+  ansible.builtin.set_fact:
+    accept_packages: "{{ acceptlist.split(',') }}"
+  when: acceptlist != ''
 
-  tasks:
-    - name: Run shadowman_patching role
-      ansible.builtin.include_role:
-        name: shadowman_patching
+- name: Check for packages to exclude
+  ansible.builtin.set_fact:
+    reject_packages: "{{ rejectlist.split(',') }}"
+  when: rejectlist != ''
 
-    - name: Build the report
-      ansible.builtin.include_role:
-        name: build_report_windows
-      delegate_to: 172.25.225.75
-      run_once: true
+- name: Install Windows Updates
+  ansible.windows.win_updates:
+    category_names: "{{ categories | default('*') }}"
+    reboot: "{{ reboot_server | default('true') }}"
+    accept_list: "{{ accept_packages | default(omit) }}"
+    reject_list: "{{ reject_packages | default(omit) }}"
+  register: patchresult
+
+- name: Display Patching Results
+  ansible.builtin.debug:
+    msg: "{{ patchresult | json_query('updates.*.title') }}"
