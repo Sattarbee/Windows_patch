@@ -1,15 +1,15 @@
 ---
 - name: Windows patching playbook
   hosts: windows
-
-  roles:
-    - shadowman_patching
+  gather_facts: yes
 
   tasks:
+    - name: Run shadowman_patching role
+      ansible.builtin.include_role:
+        name: shadowman_patching
 
     - name: Build the report
       ansible.builtin.include_role:
         name: build_report_windows
-        apply:
-          delegate_to: 172.25.225.75
-          run_once: true
+      delegate_to: 172.25.225.75
+      run_once: true
