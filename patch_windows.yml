@@ -12,18 +12,30 @@
 - name: Install Windows Updates
   ansible.windows.win_updates:
     category_names: "{{ categories | default('*') }}"
-    reboot: "{{ reboot_server | default('true') }}"
+    reboot: "{{ reboot_server | default(true) }}"
     accept_list: "{{ accept_packages | default(omit) }}"
     reject_list: "{{ reject_packages | default(omit) }}"
   register: patchresult
 
-- name: Display Patching Results
+- name: Store installed KBs as host fact
+  ansible.builtin.set_fact:
+    installed_kbs: >-
+      {{
+        patchresult.updates
+        | selectattr('kb', 'defined')
+        | map(attribute='kb')
+        | list
+      }}
+  when: patchresult.updates is defined and patchresult.updates | length > 0
+
+- name: Show Installed KBs
   ansible.builtin.debug:
-    msg: >
-      {% if patchresult.updates is defined %}
-        {% for update in patchresult.updates %}
-          - {{ update.title }}
-        {% endfor %}
+    msg: >-
+      {% if installed_kbs is defined and installed_kbs | length > 0 %}
+      Installed KBs:
+      {% for kb in installed_kbs %}
+        - {{ kb }}
+      {% endfor %}
       {% else %}
-        No updates found.
+      No KBs installed.
       {% endif %}
