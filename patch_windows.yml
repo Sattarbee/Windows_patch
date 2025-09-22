@@ -1,4 +1,3 @@
----
 - name: Install Windows Updates (robust)
   ansible.windows.win_updates:
     category_names: "{{ categories | default('*') }}"
@@ -6,16 +5,19 @@
     accept_list: "{{ accept_packages | default(omit) }}"
     reject_list: "{{ reject_packages | default(omit) }}"
   register: patchresult
-  ignore_errors: yes   # continue playbook even if some updates fail
+  ignore_errors: yes
 
 - name: Show Installed KBs
   ansible.builtin.debug:
     msg: >-
-      {% set kbs = patchresult.updates | default([]) 
+      {% set kbs = patchresult.updates | default({}) 
+         | dict2items 
+         | map(attribute='value') 
          | selectattr('kb','defined') 
          | selectattr('installed','equalto',true) 
          | map(attribute='kb') 
-         | list %}
+         | list 
+         | flatten %}
       {% if kbs | length > 0 %}
       Installed KBs:
       {% for kb in kbs %}
@@ -28,11 +30,14 @@
 - name: Show Failed KBs
   ansible.builtin.debug:
     msg: >-
-      {% set failed_kbs = patchresult.updates | default([]) 
+      {% set failed_kbs = patchresult.updates | default({}) 
+         | dict2items 
+         | map(attribute='value') 
          | selectattr('kb','defined') 
          | selectattr('installed','equalto',false) 
          | map(attribute='kb') 
-         | list %}
+         | list 
+         | flatten %}
       {% if failed_kbs | length > 0 %}
       Failed KBs:
       {% for kb in failed_kbs %}
