@@ -1,22 +1,44 @@
----
-- name: Check for packages to include
-  ansible.builtin.set_fact:
-    accept_packages: "{{ acceptlist.split(',') }}"
-  when: acceptlist != ''
-
-- name: Check for packages to exclude
-  ansible.builtin.set_fact:
-    reject_packages: "{{ rejectlist.split(',') }}"
-  when: rejectlist != ''
-
-- name: Install Windows Updates
+- name: Install Windows Updates (robust)
   ansible.windows.win_updates:
     category_names: "{{ categories | default('*') }}"
-    reboot: "{{ reboot_server | default('true') }}"
+    reboot: true
     accept_list: "{{ accept_packages | default(omit) }}"
     reject_list: "{{ reject_packages | default(omit) }}"
+    include_kb: yes
   register: patchresult
+  ignore_errors: yes   # ensures play continues even if some updates fail
 
-- name: Display Patching Results
+- name: Show Installed KBs
   ansible.builtin.debug:
-    msg: "{{ patchresult | json_query('updates.*.title') }}"
+    msg: >-
+      {% set kbs = patchresult.updates | default([]) 
+         | selectattr('kb','defined') 
+         | selectattr('installed','equalto',true) 
+         | map(attribute='kb') 
+         | list %}
+      {% if kbs | length > 0 %}
+      Installed KBs:
+      {% for kb in kbs %}
+        - {{ kb }}
+      {% endfor %}
+      {% else %}
+      No KBs installed.
+      {% endif %}
+
+- name: Show Failed KBs
+  ansible.builtin.debug:
+    msg: >-
+      {% set failed_kbs = patchresult.updates | default([]) 
+         | selectattr('kb','defined') 
+         | selectattr('installed','equalto',false) 
+         | map(attribute='kb') 
+         | list %}
+      {% if failed_kbs | length > 0 %}
+      Failed KBs:
+      {% for kb in failed_kbs %}
+        - {{ kb }}
+      {% endfor %}
+      {% else %}
+      No failed KBs.
+      {% endif %}
+
