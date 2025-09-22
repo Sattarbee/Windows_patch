@@ -1,12 +1,12 @@
+---
 - name: Install Windows Updates (robust)
   ansible.windows.win_updates:
     category_names: "{{ categories | default('*') }}"
     reboot: true
     accept_list: "{{ accept_packages | default(omit) }}"
     reject_list: "{{ reject_packages | default(omit) }}"
-    include_kb: yes
   register: patchresult
-  ignore_errors: yes   # ensures play continues even if some updates fail
+  ignore_errors: yes   # continue playbook even if some updates fail
 
 - name: Show Installed KBs
   ansible.builtin.debug:
@@ -41,4 +41,3 @@
       {% else %}
       No failed KBs.
       {% endif %}
-
