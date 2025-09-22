@@ -1,48 +1,36 @@
-- name: Install Windows Updates (robust)
+- name: Start Windows Update Scan
+  ansible.windows.win_updates:
+    category_names: "{{ categories | default('*') }}"
+    state: searched
+  register: scanresult
+
+- name: Show available updates
+  ansible.builtin.debug:
+    msg: >-
+      {% if scanresult.updates | length > 0 %}
+      Updates available:
+      {% for update in scanresult.updates.values() %}
+        - {{ update.title }}
+      {% endfor %}
+      {% else %}
+      No updates found.
+      {% endif %}
+
+- name: Install Windows Updates (with reboot)
   ansible.windows.win_updates:
     category_names: "{{ categories | default('*') }}"
     reboot: true
-    accept_list: "{{ accept_packages | default(omit) }}"
-    reject_list: "{{ reject_packages | default(omit) }}"
   register: patchresult
-  ignore_errors: yes
 
-- name: Show Installed KBs
+- name: Show installation results
   ansible.builtin.debug:
     msg: >-
-      {% set kbs = patchresult.updates | default({}) 
-         | dict2items 
-         | map(attribute='value') 
-         | selectattr('kb','defined') 
-         | selectattr('installed','equalto',true) 
-         | map(attribute='kb') 
-         | list 
-         | flatten %}
-      {% if kbs | length > 0 %}
-      Installed KBs:
-      {% for kb in kbs %}
-        - {{ kb }}
+      {% set updates = patchresult.updates | default({}) %}
+      {% if updates | length > 0 %}
+      Installation results:
+      {% for update in updates.values() %}
+        - {{ update.title }} : {{ 'Installed' if update.installed else 'Failed' }}
       {% endfor %}
       {% else %}
-      No KBs installed.
-      {% endif %}
-
-- name: Show Failed KBs
-  ansible.builtin.debug:
-    msg: >-
-      {% set failed_kbs = patchresult.updates | default({}) 
-         | dict2items 
-         | map(attribute='value') 
-         | selectattr('kb','defined') 
-         | selectattr('installed','equalto',false) 
-         | map(attribute='kb') 
-         | list 
-         | flatten %}
-      {% if failed_kbs | length > 0 %}
-      Failed KBs:
-      {% for kb in failed_kbs %}
-        - {{ kb }}
-      {% endfor %}
-      {% else %}
-      No failed KBs.
+      No updates were installed.
       {% endif %}
