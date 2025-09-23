@@ -1,60 +1,54 @@
----
-- name: Windows Patching Playbook
-  hosts: all
-  gather_facts: yes
-  tasks:
+# patch_windows.yml (as task file)
+- name: Search for available Windows updates
+  ansible.windows.win_updates:
+    state: searched
+    server_selection: auto
+  register: available_updates
+  ignore_errors: yes
 
-    - name: Search for available Windows updates
-      ansible.windows.win_updates:
-        state: searched
-        server_selection: auto
-      register: available_updates
-      ignore_errors: yes
+- name: Show available updates
+  ansible.builtin.debug:
+    msg: |
+      Host: {{ inventory_hostname }}
+      Available updates:
+      {% set updates = available_updates.updates | default([]) %}
+      {% for u in updates %}
+        - KB: {{ u.kb | default('N/A') }}, Title: {{ u.title | default('N/A') }}
+      {% else %}
+        None
+      {% endfor %}
 
-    - name: Show available updates
-      ansible.builtin.debug:
-        msg: |
-          Host: {{ inventory_hostname }}
-          Available updates:
-          {% set updates = available_updates.updates | default([]) %}
-          {% for u in updates %}
-            - KB: {{ u.kb | default('N/A') }}, Title: {{ u.title | default('N/A') }}
-          {% else %}
-            None
-          {% endfor %}
+- name: Install available Windows updates
+  ansible.windows.win_updates:
+    state: installed
+    reboot: true
+    reboot_timeout: 1800
+    category_names:
+      - CriticalUpdates
+      - SecurityUpdates
+      - UpdateRollups
+    server_selection: auto
+  register: patchresult
+  when: available_updates.updates | length > 0
+  ignore_errors: yes
 
-    - name: Install available Windows updates
-      ansible.windows.win_updates:
-        state: installed
-        reboot: true
-        reboot_timeout: 1800
-        category_names:
-          - CriticalUpdates
-          - SecurityUpdates
-          - UpdateRollups
-          # - DefinitionUpdates  # optional: include if desired
-        server_selection: auto
-      register: patchresult
-      when: available_updates.updates | length > 0
-      ignore_errors: yes
+- name: Ensure host is rebooted if required
+  ansible.windows.win_reboot:
+    reboot_timeout: 1800
+  when: patchresult.reboot_required | default(false)
 
-    - name: Ensure host is rebooted if required
-      ansible.windows.win_reboot:
-        reboot_timeout: 1800
-      when: patchresult.reboot_required | default(false)
+- name: Final Patch Summary
+  ansible.builtin.debug:
+    msg: |
+      Host: {{ inventory_hostname }}
+      OS: {{ ansible_facts.os_name | default('Windows') }} {{ ansible_facts.os_version | default('Unknown') }}
 
-    - name: Final Patch Summary
-      ansible.builtin.debug:
-        msg: |
-          Host: {{ inventory_hostname }}
-          OS: {{ ansible_facts.os_name | default('Windows') }} {{ ansible_facts.os_version | default('Unknown') }}
+      {% set updates = patchresult.updates | default([]) %}
+      {% set installed = updates | selectattr('installed','equalto',true) | map(attribute='kb') | list %}
+      {% set failed = updates | selectattr('installed','equalto',false) | map(attribute='kb') | list %}
+      {% set available = updates | selectattr('installed','equalto',none) | map(attribute='kb') | list %}
 
-          {% set updates = patchresult.updates | default([]) %}
-          {% set installed = updates | selectattr('installed','equalto',true) | map(attribute='kb') | list %}
-          {% set failed = updates | selectattr('installed','equalto',false) | map(attribute='kb') | list %}
-          {% set available = updates | selectattr('installed','equalto',none) | map(attribute='kb') | list %}
-
-          Installed KBs: {{ installed if installed | length > 0 else 'None' }}
-          Failed KBs: {{ failed if failed | length > 0 else 'None' }}
-          Pending KBs: {{ available if available | length > 0 else 'None' }}
-          Reboot Required: {{ patchresult.reboot_required | default(false) }}
+      Installed KBs: {{ installed if installed | length > 0 else 'None' }}
+      Failed KBs: {{ failed if failed | length > 0 else 'None' }}
+      Pending KBs: {{ available if available | length > 0 else 'None' }}
+      Reboot Required: {{ patchresult.reboot_required | default(false) }}
