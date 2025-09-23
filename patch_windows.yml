@@ -7,7 +7,6 @@
       - SecurityUpdates
       - UpdateRollups
       - DefinitionUpdates
-      - Updates
   register: searchresult
 
 - name: Show Pending Updates
@@ -36,16 +35,15 @@
       - SecurityUpdates
       - UpdateRollups
       - DefinitionUpdates
-      - Updates
   register: patchresult
 
-- name: Final Patch Summary
+- name: Show Installed and Failed KBs Immediately
   ansible.builtin.debug:
     msg: |
       Host: {{ inventory_hostname }}
       OS: {{ ansible_facts.os_name | default('Windows') }} {{ ansible_facts.os_version | default('Unknown') }}
       {% set updates = patchresult.updates | default({}) | dict2items | map(attribute='value') | list %}
-      {% set installed = updates | selectattr('kb','defined') | selectattr('installed','equalto',true) | map(attribute='kb') | list | flatten %}
-      {% set failed = updates | selectattr('kb','defined') | selectattr('installed','equalto',false) | map(attribute='kb') | list | flatten %}
+      {% set installed = updates | selectattr('installed','equalto',true) | map(attribute='kb') | list | flatten %}
+      {% set failed = updates | selectattr('installed','equalto',false) | map(attribute='kb') | list | flatten %}
       Installed KBs: {{ installed if installed | length > 0 else 'None' }}
       Failed KBs: {{ failed if failed | length > 0 else 'None' }}
