@@ -10,14 +10,23 @@
       - DefinitionUpdates
     server_selection: wua  # WSUS-safe mode
   register: patchresult
+  ignore_errors: yes   # Prevent the playbook from failing if updates fail
+
+- name: Ensure host is rebooted if required
+  ansible.windows.win_reboot:
+    reboot_timeout: 1800
+  when: patchresult.reboot_required | default(false)
 
 - name: Final Patch Summary
   ansible.builtin.debug:
     msg: |
       Host: {{ inventory_hostname }}
       OS: {{ ansible_facts.os_name | default('Windows') }} {{ ansible_facts.os_version | default('Unknown') }}
-      {% set updates = patchresult.updates | default({}) | dict2items | map(attribute='value') | list %}
-      {% set installed = updates | selectattr('kb','defined') | selectattr('installed','equalto',true) | map(attribute='kb') | list | flatten %}
-      {% set failed = updates | selectattr('kb','defined') | selectattr('installed','equalto',false) | map(attribute='kb') | list | flatten %}
+
+      {% set updates = patchresult.updates | default([]) %}
+      {% set installed = updates | selectattr('installed','equalto',true) | map(attribute='kb') | list %}
+      {% set failed = updates | selectattr('installed','equalto',false) | map(attribute='kb') | list %}
+
       Installed KBs: {{ installed if installed | length > 0 else 'None' }}
       Failed KBs: {{ failed if failed | length > 0 else 'None' }}
+      Reboot Required: {{ patchresult.reboot_required | default(false) }}
