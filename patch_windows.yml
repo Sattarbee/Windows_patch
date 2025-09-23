@@ -7,6 +7,7 @@
       - SecurityUpdates
       - UpdateRollups
       - DefinitionUpdates
+      - Updates
   register: searchresult
 
 - name: Show Pending Updates
@@ -35,6 +36,7 @@
       - SecurityUpdates
       - UpdateRollups
       - DefinitionUpdates
+      - Updates
   register: patchresult
 
 - name: Final Patch Summary
