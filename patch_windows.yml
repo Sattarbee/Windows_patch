@@ -1,60 +1,60 @@
 ---
-- name: Search for Windows Updates
-  ansible.windows.win_updates:
-    state: searched
-    category_names: "{{ categories | default('*') }}"
-    accept_list: "{{ accept_packages | default(omit) }}"
-    reject_list: "{{ reject_packages | default(omit) }}"
-  register: searchresult
-  ignore_errors: yes
+- name: Patch Windows Systems
+  hosts: all
+  gather_facts: yes
+  tasks:
 
-- name: Show Pending Updates
-  ansible.builtin.debug:
-    msg: >-
-      {% set pending = searchresult.updates | default({}) 
-         | dict2items 
-         | map(attribute='value') 
-         | map(attribute='title') 
-         | list %}
-      {% if pending | length > 0 %}
-      Pending updates:
-      {% for u in pending %}
-        - {{ u }}
-      {% endfor %}
-      {% else %}
-      No updates available.
-      {% endif %}
+    - name: Set OS variable
+      ansible.builtin.set_fact:
+        os: "{{ ansible_facts.os_name }} {{ ansible_facts.os_version }}"
 
-- name: Install Windows Updates
-  ansible.windows.win_updates:
-    state: installed
-    category_names: "{{ categories | default('*') }}"
-    reboot: true
-    accept_list: "{{ accept_packages | default(omit) }}"
-    reject_list: "{{ reject_packages | default(omit) }}"
-  register: patchresult
-  ignore_errors: yes
+    - name: Show OS value
+      ansible.builtin.debug:
+        msg: "OS: {{ os }}"
 
-- name: Show Installed and Failed KBs
-  ansible.builtin.debug:
-    msg: >-
-      {% set updates = patchresult.updates | default({}) | dict2items | map(attribute='value') | list %}
-      {% set installed = updates | selectattr('kb','defined') | selectattr('installed','equalto',true) | map(attribute='kb') | list | flatten %}
-      {% set failed = updates | selectattr('kb','defined') | selectattr('installed','equalto',false) | map(attribute='kb') | list | flatten %}
-      {% if installed | length > 0 %}
-      Installed KBs:
-      {% for kb in installed %}
-        - {{ kb }}
-      {% endfor %}
-      {% else %}
-      No KBs installed.
-      {% endif %}
-      
-      {% if failed | length > 0 %}
-      Failed KBs:
-      {% for kb in failed %}
-        - {{ kb }}
-      {% endfor %}
-      {% else %}
-      No failed KBs.
-      {% endif %}
+    - name: Search for pending Windows Updates
+      ansible.windows.win_updates:
+        state: searched
+        category_names: "{{ categories | default('*') }}"
+        accept_list: "{{ accept_packages | default(omit) }}"
+        reject_list: "{{ reject_packages | default(omit) }}"
+      register: searchresult
+      ignore_errors: yes
+
+    - name: Show Pending Updates
+      ansible.builtin.debug:
+        msg: >-
+          {% set pending = searchresult.updates | default({}) 
+             | dict2items 
+             | map(attribute='value') 
+             | map(attribute='title') 
+             | list %}
+          {% if pending | length > 0 %}
+          Pending updates:
+          {% for u in pending %}
+            - {{ u }}
+          {% endfor %}
+          {% else %}
+          No updates available.
+          {% endif %}
+
+    - name: Install Windows Updates
+      ansible.windows.win_updates:
+        state: installed
+        category_names: "{{ categories | default('*') }}"
+        reboot: true
+        accept_list: "{{ accept_packages | default(omit) }}"
+        reject_list: "{{ reject_packages | default(omit) }}"
+      register: patchresult
+      ignore_errors: yes
+
+    - name: Final Patch Summary
+      ansible.builtin.debug:
+        msg: |
+          Host: {{ inventory_hostname }}
+          OS: {{ os }}
+          {% set updates = patchresult.updates | default({}) | dict2items | map(attribute='value') | list %}
+          {% set installed = updates | selectattr('kb','defined') | selectattr('installed','equalto',true) | map(attribute='kb') | list | flatten %}
+          {% set failed = updates | selectattr('kb','defined') | selectattr('installed','equalto',false) | map(attribute='kb') | list | flatten %}
+          Installed KBs: {{ installed if installed | length > 0 else 'None' }}
+          Failed KBs: {{ failed if failed | length > 0 else 'None' }}
