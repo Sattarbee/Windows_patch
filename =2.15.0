@@ -1,0 +1,6 @@
+Starting galaxy collection install process
+Process install dependency map
+Starting collection install process
+Downloading https://galaxy.ansible.com/api/v3/plugin/ansible/content/published/collections/artifacts/ansible-windows-3.2.0.tar.gz to /home/aap-tower/.ansible/tmp/ansible-local-641821vnviqc9y/tmpkn2x2aob/ansible-windows-3.2.0-cdnn_2ov
+Installing 'ansible.windows:3.2.0' to '/home/aap-tower/.ansible/collections/ansible_collections/ansible/windows'
+ansible.windows:3.2.0 was installed successfully
