@@ -1,32 +1,41 @@
-# patch_windows.yml (as task file)
-- name: Search for available Windows updates
+---
+# Task file or standalone playbook (remove hosts/gather_facts if including from another playbook)
+- name: Search for all available Windows updates
   ansible.windows.win_updates:
     state: searched
     server_selection: auto
+    category_names:
+      - CriticalUpdates
+      - SecurityUpdates
+      - UpdateRollups
+      - DefinitionUpdates
+      - FeaturePacks
+      - Updates
   register: available_updates
   ignore_errors: yes
 
-- name: Show available updates
+- name: Show detailed available updates
   ansible.builtin.debug:
     msg: |
       Host: {{ inventory_hostname }}
-      Available updates:
       {% set updates = available_updates.updates | default([]) %}
-      {% for u in updates %}
-        - KB: {{ u.kb | default('N/A') }}, Title: {{ u.title | default('N/A') }}
+      {% if updates | length == 0 %}
+      No updates detected
       {% else %}
-        None
+      Updates detected:
+      {% for u in updates %}
+        - KB: {{ u.kb | default('N/A') }}
+          Title: {{ u.title | default('N/A') }}
+          Category: {{ u.category | default('N/A') }}
+          Installed: {{ u.installed | default('N/A') }}
       {% endfor %}
+      {% endif %}
 
 - name: Install available Windows updates
   ansible.windows.win_updates:
     state: installed
     reboot: true
-    reboot_timeout: 1800
-    category_names:
-      - CriticalUpdates
-      - SecurityUpdates
-      - UpdateRollups
+    reboot_timeout: 200
     server_selection: auto
   register: patchresult
   when: available_updates.updates | length > 0
@@ -34,7 +43,7 @@
 
 - name: Ensure host is rebooted if required
   ansible.windows.win_reboot:
-    reboot_timeout: 1800
+    reboot_timeout: 200
   when: patchresult.reboot_required | default(false)
 
 - name: Final Patch Summary
@@ -46,9 +55,10 @@
       {% set updates = patchresult.updates | default([]) %}
       {% set installed = updates | selectattr('installed','equalto',true) | map(attribute='kb') | list %}
       {% set failed = updates | selectattr('installed','equalto',false) | map(attribute='kb') | list %}
-      {% set available = updates | selectattr('installed','equalto',none) | map(attribute='kb') | list %}
+      {% set pending = updates | selectattr('installed','equalto',none) | map(attribute='kb') | list %}
 
       Installed KBs: {{ installed if installed | length > 0 else 'None' }}
       Failed KBs: {{ failed if failed | length > 0 else 'None' }}
-      Pending KBs: {{ available if available | length > 0 else 'None' }}
+      Pending KBs: {{ pending if pending | length > 0 else 'None' }}
       Reboot Required: {{ patchresult.reboot_required | default(false) }}
+
