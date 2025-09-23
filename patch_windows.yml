@@ -7,8 +7,8 @@
       - CriticalUpdates
       - SecurityUpdates
       - UpdateRollups
-      # - DefinitionUpdates   # Optional: may block other updates
-    server_selection: auto   # Let Windows choose WSUS or Microsoft Update
+      # - DefinitionUpdates   # Optional: may block detection
+    server_selection: auto
   register: patchresult
   ignore_errors: yes
 
@@ -26,8 +26,9 @@
       {% set updates = patchresult.updates | default([]) %}
       {% set installed = updates | selectattr('installed','equalto',true) | map(attribute='kb') | list %}
       {% set failed = updates | selectattr('installed','equalto',false) | map(attribute='kb') | list %}
+      {% set available = updates | selectattr('installed','equalto',none) | map(attribute='kb') | list %}
 
       Installed KBs: {{ installed if installed | length > 0 else 'None' }}
       Failed KBs: {{ failed if failed | length > 0 else 'None' }}
+      Available KBs (not installed): {{ available if available | length > 0 else 'None' }}
       Reboot Required: {{ patchresult.reboot_required | default(false) }}
-
