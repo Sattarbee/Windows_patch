@@ -1,56 +1,23 @@
----
-- name: Windows Patch Management (WSUS Safe)
-  hosts: all
-  gather_facts: yes
-  vars:
-    patch_categories:
+- name: Install Windows Updates
+  ansible.windows.win_updates:
+    state: installed
+    reboot: true
+    reboot_timeout: 1800
+    category_names:
       - CriticalUpdates
       - SecurityUpdates
       - UpdateRollups
       - DefinitionUpdates
+    server_selection: wua  # WSUS-safe mode
+  register: patchresult
 
-  tasks:
-
-    - name: Search for Pending Updates
-      ansible.windows.win_updates:
-        state: searched
-        category_names: "{{ patch_categories }}"
-        server_selection: wua
-      register: searchresult
-
-    - name: Show Pending Updates
-      ansible.builtin.debug:
-        msg: >-
-          {% set pending = searchresult.updates | default({})
-             | dict2items
-             | map(attribute='value')
-             | map(attribute='title')
-             | list %}
-          {% if pending | length > 0 %}
-          Pending updates:
-          {% for u in pending %}
-            - {{ u }}
-          {% endfor %}
-          {% else %}
-          No updates available.
-          {% endif %}
-
-    - name: Install Windows Updates
-      ansible.windows.win_updates:
-        state: installed
-        reboot: true
-        reboot_timeout: 300
-        category_names: "{{ patch_categories }}"
-        server_selection: wua
-      register: patchresult
-
-    - name: Final Patch Summary
-      ansible.builtin.debug:
-        msg: |
-          Host: {{ inventory_hostname }}
-          OS: {{ ansible_facts.os_name | default('Windows') }} {{ ansible_facts.os_version | default('Unknown') }}
-          {% set updates = patchresult.updates | default({}) | dict2items | map(attribute='value') | list %}
-          {% set installed = updates | selectattr('kb','defined') | selectattr('installed','equalto',true) | map(attribute='kb') | list | flatten %}
-          {% set failed = updates | selectattr('kb','defined') | selectattr('installed','equalto',false) | map(attribute='kb') | list | flatten %}
-          Installed KBs: {{ installed if installed | length > 0 else 'None' }}
-          Failed KBs: {{ failed if failed | length > 0 else 'None' }}
+- name: Final Patch Summary
+  ansible.builtin.debug:
+    msg: |
+      Host: {{ inventory_hostname }}
+      OS: {{ ansible_facts.os_name | default('Windows') }} {{ ansible_facts.os_version | default('Unknown') }}
+      {% set updates = patchresult.updates | default({}) | dict2items | map(attribute='value') | list %}
+      {% set installed = updates | selectattr('kb','defined') | selectattr('installed','equalto',true) | map(attribute='kb') | list | flatten %}
+      {% set failed = updates | selectattr('kb','defined') | selectattr('installed','equalto',false) | map(attribute='kb') | list | flatten %}
+      Installed KBs: {{ installed if installed | length > 0 else 'None' }}
+      Failed KBs: {{ failed if failed | length > 0 else 'None' }}
