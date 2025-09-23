@@ -30,3 +30,4 @@
       Installed KBs: {{ installed if installed | length > 0 else 'None' }}
       Failed KBs: {{ failed if failed | length > 0 else 'None' }}
       Reboot Required: {{ patchresult.reboot_required | default(false) }}
+
