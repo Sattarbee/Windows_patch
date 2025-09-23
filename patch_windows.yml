@@ -7,10 +7,10 @@
       - CriticalUpdates
       - SecurityUpdates
       - UpdateRollups
-      - DefinitionUpdates
-    server_selection: wua  # WSUS-safe mode
+      # - DefinitionUpdates   # Optional: may block other updates
+    server_selection: auto   # Let Windows choose WSUS or Microsoft Update
   register: patchresult
-  ignore_errors: yes   # Prevent the playbook from failing if updates fail
+  ignore_errors: yes
 
 - name: Ensure host is rebooted if required
   ansible.windows.win_reboot:
