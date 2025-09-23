@@ -7,15 +7,16 @@
       - SecurityUpdates
       - UpdateRollups
       - DefinitionUpdates
+    server_selection: wua   # Use Windows Update Agent to respect WSUS approvals
   register: searchresult
 
 - name: Show Pending Updates
   ansible.builtin.debug:
     msg: >-
-      {% set pending = searchresult.updates | default({})
-         | dict2items
-         | map(attribute='value')
-         | map(attribute='title')
+      {% set pending = searchresult.updates | default({}) 
+         | dict2items 
+         | map(attribute='value') 
+         | map(attribute='title') 
          | list %}
       {% if pending | length > 0 %}
       Pending updates:
@@ -35,15 +36,25 @@
       - SecurityUpdates
       - UpdateRollups
       - DefinitionUpdates
+    server_selection: wua
+    reboot_timeout: 1800  # wait up to 30 minutes for reboot
   register: patchresult
 
-- name: Show Installed and Failed KBs Immediately
+- name: Show Installed / Failed Updates Summary
   ansible.builtin.debug:
     msg: |
       Host: {{ inventory_hostname }}
       OS: {{ ansible_facts.os_name | default('Windows') }} {{ ansible_facts.os_version | default('Unknown') }}
       {% set updates = patchresult.updates | default({}) | dict2items | map(attribute='value') | list %}
-      {% set installed = updates | selectattr('installed','equalto',true) | map(attribute='kb') | list | flatten %}
-      {% set failed = updates | selectattr('installed','equalto',false) | map(attribute='kb') | list | flatten %}
+      {% set installed = updates | selectattr('installed','equalto',true) | map(attribute='kb') | select('defined') | list | flatten %}
+      {% set failed = updates | selectattr('installed','equalto',false) | map(attribute='kb') | select('defined') | list | flatten %}
       Installed KBs: {{ installed if installed | length > 0 else 'None' }}
       Failed KBs: {{ failed if failed | length > 0 else 'None' }}
+
+- name: Show all installed KBs on server
+  ansible.windows.win_command: wmic qfe get HotFixID,InstalledOn
+  register: all_kbs
+
+- name: Display all installed KBs
+  ansible.builtin.debug:
+    msg: "{{ all_kbs.stdout_lines }}"
